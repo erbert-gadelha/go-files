@@ -8,10 +8,10 @@ import (
 	"strings"
 )
 
-func main() {
+func OuvirPorta(addr string) *net.TCPListener {
 	fmt.Println("Hello from Server!")
 
-	r, err := net.ResolveTCPAddr("tcp", "localhost:1313")
+	r, err := net.ResolveTCPAddr("tcp", addr)
 	if err != nil {
 		fmt.Println("Erro ao resolver endereço:", err)
 		os.Exit(1)
@@ -22,17 +22,10 @@ func main() {
 		fmt.Println("Erro ao iniciar servidor:", err)
 		os.Exit(1)
 	}
-	fmt.Println("Servidor iniciado na porta 1313.")
 
-	for {
-		conn, err := ln.Accept()
-		if err != nil {
-			fmt.Println("Erro ao aceitar conexão:", err)
-			continue
-		}
-		go handleConnection(conn)
-	}
+	return ln;
 }
+
 
 func handleConnection(conn net.Conn) {
 	defer conn.Close()
@@ -40,7 +33,7 @@ func handleConnection(conn net.Conn) {
 
 	reader := bufio.NewReader(conn)
 	for {
-		req, err := reader.ReadString('\n')
+		req, err := reader.ReadString('\n');
 		if err != nil {
 			fmt.Println("Erro ao ler:", err)
 			break
@@ -55,5 +48,20 @@ func handleConnection(conn net.Conn) {
 			break
 		}
 	}
+	
 	fmt.Println("Cliente desconectado.")
+}
+
+func main() {
+	ln := OuvirPorta("localhost:1313");
+	fmt.Println("Servidor iniciado na porta 1313.")
+
+	for {
+		conn, err := ln.Accept()
+		if err != nil {
+			fmt.Println("Erro ao aceitar conexão:", err)
+			continue
+		}
+		go handleConnection(conn)
+	}
 }
