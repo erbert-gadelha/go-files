@@ -13,13 +13,13 @@ import (
 func AbrirConexaoTCP(addr string) *net.TCPListener {
 	fmt.Println("Hello from Server!")
 
-	r, err := net.ResolveTCPAddr("tcp", addr)
+	tcpAddr, err := net.ResolveTCPAddr("tcp", addr)
 	if err != nil {
 		fmt.Println("Erro ao resolver endereço:", err)
 		os.Exit(1)
 	}
 
-	ln, err := net.ListenTCP("tcp", r)
+	ln, err := net.ListenTCP("tcp", tcpAddr)
 	if err != nil {
 		fmt.Println("Erro ao iniciar servidor:", err)
 		os.Exit(1)
