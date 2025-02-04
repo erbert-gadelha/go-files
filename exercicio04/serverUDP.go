@@ -8,25 +8,22 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"sync"
 )
 
-func AbrirConexaoTCP(addr string) *net.TCPListener {
-	fmt.Println("Hello from Server!")
+func AbrirConexaoUDP(port int) *net.UDPConn {
+	config := &net.UDPAddr{
+		IP:   net.IPv4(0, 0, 0, 0),
+		Port: port,
+		Zone: "",
+	}
 
-	r, err := net.ResolveTCPAddr("tcp", addr)
+	conn, err := net.ListenUDP("udp", config)
 	if err != nil {
 		fmt.Println("Erro ao resolver endereço:", err)
 		os.Exit(1)
 	}
 
-	ln, err := net.ListenTCP("tcp", r)
-	if err != nil {
-		fmt.Println("Erro ao iniciar servidor:", err)
-		os.Exit(1)
-	}
-
-	return ln
+	return conn
 }
 
 func handleConnection_(conn net.Conn) {
@@ -60,28 +57,50 @@ func EscreverArquivo(str string, index int) int {
 	return arquivos[index%len(arquivos)].linhas
 }
 
-func CriarArquivos() {
+func CriarArquivos(count int) {
+	arquivos = make([]*Arquivo, count)
+
 	for i := 0; i < len(arquivos); i++ {
 		arquivos[i] = CriarArquivo(fmt.Sprintf("exercicio04-ebgr-%02d.txt", i))
 	}
 }
 
-var arquivos [4]*Arquivo
+var arquivos []*Arquivo
+
+func handleMessage(conn *net.UDPConn, remoteAddr net.Addr, buf []byte) {
+
+	str := string(buf)
+	for i := 0; i < len(buf); i++ {
+		if buf[i] == '\n' {
+			str = str[:i]
+			break
+		}
+	}
+	rep := strconv.Itoa(len(str))
+	_, err := conn.WriteTo([]byte(rep+"\n"), remoteAddr)
+	if err != nil {
+		fmt.Println("Erro ao enviar resposta", err)
+	}
+
+	fmt.Println(fmt.Sprintf("[%s]: \"%s\"", remoteAddr, str))
+}
 
 func main() {
-	ln := AbrirConexaoTCP("localhost:1313")
-	fmt.Println("Servidor iniciado na porta 1313.")
+	CriarArquivos(2)
 
-	CriarArquivos()
+	conn := AbrirConexaoUDP(4002)
+	defer conn.Close()
+
+	//remoteConns := new(sync.Map)
 
 	for {
-		conn, err := ln.Accept()
+		buf := make([]byte, 1024)
+		_, remoteAddr, err := conn.ReadFrom(buf)
 		if err != nil {
-			fmt.Println("Erro ao aceitar conexão:", err)
+			fmt.Println(err)
 			continue
 		}
-
-		go handleConnection_(conn)
+		handleMessage(conn, remoteAddr, buf)
 	}
 }
 
@@ -132,27 +151,4 @@ func (a *Arquivo) Concatenar(value string) {
 	defer a.semaforo.V()
 	a.escrita.WriteString(value)
 	a.linhas++
-}
-
-// ///// SUBROTINA QUE REALIZA CONCATENACAO (LEITURA E ESCRITA) NO ARQUIVO	/////////
-func EscreverArquivos_WAITGROUP(arquivos []*Arquivo, nome string, count int, wg *sync.WaitGroup) {
-	defer wg.Done()
-	for i := 0; i < count; i++ {
-		for j := 0; j < len(arquivos); j++ {
-			arquivos[j].Concatenar(fmt.Sprintf("%s: %d\n", nome, i))
-		}
-	}
-}
-
-// ///// SUBROTINAS CONCORRENTES	/////////
-func func_parallel(arquivos []*Arquivo, count int) {
-	var wg sync.WaitGroup
-	wg.Add(5)
-
-	go EscreverArquivos_WAITGROUP(arquivos[:], "thread A", count, &wg)
-	go EscreverArquivos_WAITGROUP(arquivos[:], "thread B", count, &wg)
-	go EscreverArquivos_WAITGROUP(arquivos[:], "thread C", count, &wg)
-	go EscreverArquivos_WAITGROUP(arquivos[:], "thread D", count, &wg)
-	go EscreverArquivos_WAITGROUP(arquivos[:], "thread E", count, &wg)
-	wg.Wait()
 }
