@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"strconv"
@@ -19,10 +20,10 @@ func AbrirConexao(addr string) net.Conn {
 }
 
 func handleConnection(conn net.Conn) {
-	params := [7]string{"olá\n", "mundo\n", "!\n", "como\n", "vai\n", "você\n", "?\n"}
+	//params := [7]string{"olá\n", "mundo\n", "!\n", "como\n", "vai\n", "você\n", "?\n"}
+	params := [1]string{readFile("lorem-ipsum.txt")}
 
-	buffer := make([]byte, 1024)
-
+	buffer := make([]byte, 2048)
 	for i := 0; i < executions; i++ {
 		req := append([]byte{byte(i)}, []byte(params[i%len(params)])...)
 
@@ -50,4 +51,12 @@ func main() {
 	defer conn.Close()
 
 	handleConnection(conn)
+}
+
+func readFile(fileName string) string {
+	file, _ := os.Open(fileName)
+	content, _ := io.ReadAll(file)
+
+	file.Close()
+	return string(content)
 }

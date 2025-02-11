@@ -74,13 +74,6 @@ func handleMessageUDP(conn *net.UDPConn, remoteAddr net.Addr, buf []byte) {
 
 	index := int(buf[0])
 	buf = buf[1:]
-	/*for i := 0; i < len(buf); i++ {
-		if buf[i] == '\n' {
-			buf = buf[:i]
-			break
-		}
-	}*/
-
 	newlineIndex := bytes.IndexByte(buf, '\n')
 	if newlineIndex != -1 {
 		buf = buf[:newlineIndex]
@@ -100,7 +93,7 @@ func main() {
 	defer conn.Close()
 
 	for {
-		buf := make([]byte, 1024)
+		buf := make([]byte, 2048)
 		_, remoteAddr, err := conn.ReadFrom(buf)
 		if err != nil {
 			fmt.Println(err)
