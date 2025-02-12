@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
 	"fmt"
 	"io"
@@ -24,32 +23,9 @@ func OuvirConexaoUDP(port int) *net.UDPConn {
 		os.Exit(1)
 	}
 
-	fmt.Printf("Hello from UDP Server!\nServidor iniciado na porta %d.", port)
+	fmt.Printf("Hello from UDP Server!\nServidor iniciado na porta %d.\n", port)
 
 	return conn
-}
-
-func handleConnection_(conn net.Conn) {
-	defer conn.Close()
-	fmt.Println("Cliente conectado:", conn.RemoteAddr())
-	reader := bufio.NewReader(conn)
-
-	for {
-		req, err := reader.ReadString('\n')
-
-		if err != nil {
-			break
-		}
-
-		var rep string = strconv.Itoa(EscreverArquivo(req[1:], int(req[0])))
-
-		_, err = conn.Write([]byte(rep + "\n"))
-		if err != nil {
-			break
-		}
-	}
-
-	fmt.Println("Cliente desconectado.", conn.RemoteAddr())
 }
 
 func EscreverArquivo(str string, index int) int {
@@ -99,6 +75,7 @@ func main() {
 			fmt.Println(err)
 			continue
 		}
+		fmt.Println("Cliente conectado:", remoteAddr)
 
 		go handleMessageUDP(conn, remoteAddr, buf)
 	}
