@@ -14,7 +14,7 @@ var arquivos []*Arquivo
 
 func AbrirConexaoTCP(port int) *net.TCPListener {
 
-	tcpAddr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("localhost:%d", port))
+	tcpAddr, err := net.ResolveTCPAddr("tcp4", fmt.Sprintf("0.0.0.0:%d", port))
 	if err != nil {
 		fmt.Println("Erro ao resolver endereço:", err)
 		os.Exit(1)
