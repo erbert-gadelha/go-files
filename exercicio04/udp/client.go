@@ -47,6 +47,7 @@ func main() {
 		executions, _ = strconv.Atoi(os.Args[1])
 	}
 
+	//conn := AbrirConexao("192.168.15.9:4002")
 	conn := AbrirConexao("localhost:4002")
 	defer conn.Close()
 

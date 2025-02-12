@@ -11,7 +11,7 @@ import (
 )
 
 func AbrirConexao(addr string) *net.TCPConn {
-	r, err := net.ResolveTCPAddr("tcp", addr)
+	r, err := net.ResolveTCPAddr("tcp4", addr)
 	if err != nil {
 		fmt.Println("Erro ao resolver endereço:", err)
 		os.Exit(1)
@@ -58,6 +58,7 @@ func main() {
 		executions, _ = strconv.Atoi(os.Args[1])
 	}
 
+	//conn := AbrirConexao("192.168.15.9:1313")
 	conn := AbrirConexao("localhost:1313")
 	defer conn.Close()
 
