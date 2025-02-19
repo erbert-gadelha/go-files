@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package arquivo;
+
+option go_package = "exercicio05/grpc/arquivo";
+
+service ArquivoService {
+    rpc Linhas(Args) returns (LinhasResponse);
+}
+
+message Args {
+    string conteudo = 1;
+}
+
+message LinhasResponse {
+    int32 linhas = 1;
+}
