@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package grpcarquivo;
+
+option go_package = "./grpcarquivo";
+
+service ArquivoService {
+    rpc CountLines(Request) returns (Response);
+}
+
+message Request {
+    string content = 1;
+}
+
+message Response {
+    int32 lines = 1;
+}

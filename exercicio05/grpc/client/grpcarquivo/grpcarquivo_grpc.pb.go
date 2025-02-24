@@ -2,9 +2,9 @@
 // versions:
 // - protoc-gen-go-grpc v1.5.1
 // - protoc             v3.21.12
-// source: exercicio05/grpc/arquivo.proto
+// source: grpcarquivo.proto
 
-package arquivo
+package grpcarquivo
 
 import (
 	context "context"
@@ -19,14 +19,14 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	ArquivoService_Linhas_FullMethodName = "/arquivo.ArquivoService/Linhas"
+	ArquivoService_CountLines_FullMethodName = "/grpcarquivo.ArquivoService/CountLines"
 )
 
 // ArquivoServiceClient is the client API for ArquivoService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ArquivoServiceClient interface {
-	Linhas(ctx context.Context, in *Args, opts ...grpc.CallOption) (*LinhasResponse, error)
+	CountLines(ctx context.Context, in *Request, opts ...grpc.CallOption) (*Response, error)
 }
 
 type arquivoServiceClient struct {
@@ -37,10 +37,10 @@ func NewArquivoServiceClient(cc grpc.ClientConnInterface) ArquivoServiceClient {
 	return &arquivoServiceClient{cc}
 }
 
-func (c *arquivoServiceClient) Linhas(ctx context.Context, in *Args, opts ...grpc.CallOption) (*LinhasResponse, error) {
+func (c *arquivoServiceClient) CountLines(ctx context.Context, in *Request, opts ...grpc.CallOption) (*Response, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(LinhasResponse)
-	err := c.cc.Invoke(ctx, ArquivoService_Linhas_FullMethodName, in, out, cOpts...)
+	out := new(Response)
+	err := c.cc.Invoke(ctx, ArquivoService_CountLines_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +51,7 @@ func (c *arquivoServiceClient) Linhas(ctx context.Context, in *Args, opts ...grp
 // All implementations must embed UnimplementedArquivoServiceServer
 // for forward compatibility.
 type ArquivoServiceServer interface {
-	Linhas(context.Context, *Args) (*LinhasResponse, error)
+	CountLines(context.Context, *Request) (*Response, error)
 	mustEmbedUnimplementedArquivoServiceServer()
 }
 
@@ -62,8 +62,8 @@ type ArquivoServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedArquivoServiceServer struct{}
 
-func (UnimplementedArquivoServiceServer) Linhas(context.Context, *Args) (*LinhasResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Linhas not implemented")
+func (UnimplementedArquivoServiceServer) CountLines(context.Context, *Request) (*Response, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CountLines not implemented")
 }
 func (UnimplementedArquivoServiceServer) mustEmbedUnimplementedArquivoServiceServer() {}
 func (UnimplementedArquivoServiceServer) testEmbeddedByValue()                        {}
@@ -86,20 +86,20 @@ func RegisterArquivoServiceServer(s grpc.ServiceRegistrar, srv ArquivoServiceSer
 	s.RegisterService(&ArquivoService_ServiceDesc, srv)
 }
 
-func _ArquivoService_Linhas_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Args)
+func _ArquivoService_CountLines_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Request)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ArquivoServiceServer).Linhas(ctx, in)
+		return srv.(ArquivoServiceServer).CountLines(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: ArquivoService_Linhas_FullMethodName,
+		FullMethod: ArquivoService_CountLines_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ArquivoServiceServer).Linhas(ctx, req.(*Args))
+		return srv.(ArquivoServiceServer).CountLines(ctx, req.(*Request))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -108,14 +108,14 @@ func _ArquivoService_Linhas_Handler(srv interface{}, ctx context.Context, dec fu
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var ArquivoService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "arquivo.ArquivoService",
+	ServiceName: "grpcarquivo.ArquivoService",
 	HandlerType: (*ArquivoServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "Linhas",
-			Handler:    _ArquivoService_Linhas_Handler,
+			MethodName: "CountLines",
+			Handler:    _ArquivoService_CountLines_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "exercicio05/grpc/arquivo.proto",
+	Metadata: "grpcarquivo.proto",
 }
