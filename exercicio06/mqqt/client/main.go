@@ -1,14 +1,15 @@
 package main
 
 import (
-	"client/util"
 	"fmt"
 	"io"
 	"log"
 	"os"
 	"strconv"
 	"sync"
-	"time"
+	//"time"
+	util "client/util"
+	connection "client/connection"
 )
 
 //"github.com/streadway/amqp"
@@ -32,7 +33,7 @@ const (
 	count = 100 //10_000
 )
 
-func clientGO(conn util.Connection, topic_name string, wg *sync.WaitGroup, start <-chan struct{}) {
+func clientGO(conn connection.Connection, topic_name string, wg *sync.WaitGroup, start <-chan struct{}) {
 	defer conn.Disconnect()
 	defer wg.Done()
 	//msgBytes := util.RequestToJson(util.Request{Content: message })
@@ -40,7 +41,6 @@ func clientGO(conn util.Connection, topic_name string, wg *sync.WaitGroup, start
 	<-start
 
 	for i := 0; i < count; i++ {
-
 		msg := fmt.Sprintf("message %d", i+1)
 		msgBytes := util.RequestToJson(util.Request{Content: msg, ResponseTo: topic_name})
 		conn.Publish(topic_name, msgBytes)
@@ -56,24 +56,19 @@ func main() {
 	var wg sync.WaitGroup
 	start := make(chan struct{})
 
-	for i := 0; i < 1; i++ {
+	for i := 0; i < 5; i++ {
+		fmt.Println(i)
+
 		wg.Add(1)
-		conn := util.NewConnection(util.Url, "client_0")
-		/*conn.MessageHandler = func(msg []byte) {
-			fmt.Printf("< recebido <%s>.\n", string(msg))
-		}*/
+		conn := connection.NewConnection(util.Url, "client_0")
 
 		topic_name := fmt.Sprintf("fila_%d", i+1)
 		conn.Subscribe(topic_name)
 
 		go clientGO(*conn, topic_name, &wg, start)
-
-		/*msg := ("Hello World <" + strconv.Itoa(i) + ">.")
-		fmt.Printf("> enviado <%s>.\n", msg)
-		conn.Publish("topico", []byte(msg))*/
 	}
 
-	time.Sleep(1 * time.Second)
+	//time.Sleep(1 * time.Second)
 	close(start)
 
 	wg.Wait()

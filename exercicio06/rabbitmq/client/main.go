@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -11,8 +10,7 @@ import (
 	"time"
 
 	util "client/util"
-
-	"github.com/streadway/amqp"
+	connection "client/connection"
 )
 
 var clients int = 1
@@ -38,36 +36,21 @@ type Request struct {
 	Content string
 }
 
-func connect(url string) (*amqp.Channel, *amqp.Connection) {
-	conn, err := amqp.Dial(url)
-	handleError(err, "🟥 conexão: %v")
-	log.Printf("%s✅ conectado!%s", Blue, reset)
-	ch, err := conn.Channel()
-	handleError(err, "🟥 canal: %v")
-	return ch, conn
-}
 
-func toJson(request Request) []byte {
-	msgBytes, err := json.Marshal(request)
-	handleError(err, "🟥 marshal: %v")
-	return msgBytes
-}
-
-func clientGO(conn *amqp.Connection, ch *amqp.Channel, msgs <-chan amqp.Delivery, replyTo string, wg *sync.WaitGroup, start <-chan struct{}) {
-	defer conn.Close()
+func clientGO(conn *connection.Connection, topic_name string, wg *sync.WaitGroup, start <-chan struct{}) {
+	defer conn.Disconnect()
 	defer wg.Done()
+	//msgBytes := util.RequestToJson(util.Request{Content: message })
 
-	msgBytes := util.RequestToJson(util.Request{Content: message})
+	<-start
 
 	for i := 0; i < count; i++ {
-		util.Publish(ch, replyTo, msgBytes)
-		msg := <-msgs
-
-		response := util.JsonToResponse(msg.Body)
-
-		log.Printf("🟩 linhas %s%d%s.", yellow, response.Lines, reset)
+		msg := fmt.Sprintf("message %d", i+1)
+		msgBytes := util.RequestToJson(util.Request{Content: msg, ResponseTo: topic_name})
+		conn.Publish(topic_name, msgBytes)
+		response := <-conn.Message
+		log.Println("recebido: " + string(response))
 	}
-
 }
 
 func main() {
@@ -77,15 +60,12 @@ func main() {
 	start := make(chan struct{})
 
 	for i := 0; i < clients; i++ {
+		fmt.Println(i)
 		wg.Add(1)
-		queueName := fmt.Sprintf("fila_%d", i+1)
-
-		conn := util.NewConnection(util.Url)
-		ch := util.NewChannel(conn)
-		util.CreateQueue(queueName)
-		msgs := util.NewConsumer(ch, queueName)
-
-		go clientGO(conn, ch, msgs, queueName, &wg, start)
+		conn := connection.NewConnection(util.Url, "client_0")
+		topic_name := fmt.Sprintf("fila_%d", i+1)
+		conn.Subscribe(topic_name)
+		go clientGO(conn, topic_name, &wg, start)
 	}
 
 	time.Sleep(1 * time.Second)
