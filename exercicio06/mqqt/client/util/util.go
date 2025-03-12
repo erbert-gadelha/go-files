@@ -30,49 +30,63 @@ type Response struct {
 	Lines int
 }
 
-func Funcao() {
+type Connection struct {
+	client         mqtt.Client
+	MessageHandler func([]byte)
+}
 
-	// Configuração do broker
-	broker := "tcp://localhost:1883" // URL do servidor MQTT
-	clientID := "go_mqtt_client"     // Identificador do cliente
-	topic := "teste"                 // Tópico MQTT
+func (c *Connection) Publish(queue string, msg []byte) {
+	token := c.client.Publish(queue, 1, false, msg)
+	if token.Wait() && token.Error() != nil {
+		panic(token.Error())
+	}
+}
+func (c *Connection) Subscribe(queue string) {
+	if token := c.client.Subscribe(queue, 1, func(client mqtt.Client, msg mqtt.Message) {
+		c.MessageHandler(msg.Payload())
+	}); token.Wait() && token.Error() != nil {
+		panic(token.Error())
+	}
+	fmt.Printf("inscrito no tópico <%s>\n", queue)
+}
 
-	// Criando opções do cliente MQTT
+func (c *Connection) Disconnect() {
+	c.client.Disconnect(255)
+}
+
+func NewConnection(url string, id string) *Connection {
 	opts := mqtt.NewClientOptions()
-	opts.AddBroker(broker)
-	opts.SetClientID(clientID)
-	opts.SetDefaultPublishHandler(func(client mqtt.Client, msg mqtt.Message) {
-		fmt.Printf("Recebido: %s de %s\n", msg.Payload(), msg.Topic())
-	})
+	opts.AddBroker(Url)
+	opts.SetClientID(id)
 
-	// Conectando ao servidor MQTT
 	client := mqtt.NewClient(opts)
 	if token := client.Connect(); token.Wait() && token.Error() != nil {
 		panic(token.Error())
 	}
-	fmt.Println("🚀 Conectado ao broker MQTT!")
+	conn := Connection{client: client, MessageHandler: nil}
 
-	// Assinar um tópico
-	if token := client.Subscribe(topic, 1, func(client mqtt.Client, msg mqtt.Message) {
-		fmt.Printf("📩 Mensagem recebida no tópico [%s]: %s\n", msg.Topic(), msg.Payload())
-	}); token.Wait() && token.Error() != nil {
-		panic(token.Error())
+	opts.SetDefaultPublishHandler(func(mqtt_client mqtt.Client, msg mqtt.Message) {
+		conn.MessageHandler(msg.Payload())
+	})
+	return &conn
+}
+
+func Funcao() {
+	conn := NewConnection(Url, "client_0")
+	conn.MessageHandler = func(msg []byte) {
+		fmt.Printf("< recebido <%s>.\n", string(msg))
 	}
-	fmt.Println("✅ Inscrito no tópico:", topic)
 
-	// Publicar uma mensagem
-	message := "Olá, MQTT do Go!"
-	if token := client.Publish(topic, 1, false, message); token.Wait() && token.Error() != nil {
-		panic(token.Error())
+	conn.Subscribe("topico")
+
+	for i := 0; i < 10; i++ {
+		msg := fmt.Sprint("Hello <%d>.", i)
+		fmt.Printf("> enviado <%s>.\n", msg)
+		conn.Publish("topico", []byte(msg))
+		time.Sleep(1 * time.Second)
 	}
-	fmt.Println("📤 Mensagem publicada:", message)
-
-	// Mantém o programa rodando para receber mensagens
-	time.Sleep(5 * time.Second)
-
-	// Desconectar
-	client.Disconnect(250)
-	fmt.Println("🔌 Desconectado do MQTT")
+	conn.Disconnect()
+	fmt.Println("<Fin>")
 }
 
 /*
