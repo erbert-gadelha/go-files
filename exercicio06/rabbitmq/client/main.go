@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	util "client/util"
+
 	"github.com/streadway/amqp"
 )
 
@@ -17,10 +19,10 @@ var clients int = 1
 var message string = "Hello World!\nHow are You?"
 
 const (
-	Reset   = "\033[0m"
+	reset   = "\033[0m"
 	Red     = "\033[31m"
 	Green   = "\033[32m"
-	Yellow  = "\033[33m"
+	yellow  = "\033[33m"
 	Blue    = "\033[34m"
 	Magenta = "\033[35m"
 	Cyan    = "\033[36m"
@@ -29,7 +31,7 @@ const (
 )
 
 const (
-	count = 10_000
+	count = 10 //10_000
 )
 
 type Request struct {
@@ -39,7 +41,7 @@ type Request struct {
 func connect(url string) (*amqp.Channel, *amqp.Connection) {
 	conn, err := amqp.Dial(url)
 	handleError(err, "🟥 conexão: %v")
-	log.Printf("%s✅ conectado!%s", Blue, Reset)
+	log.Printf("%s✅ conectado!%s", Blue, reset)
 	ch, err := conn.Channel()
 	handleError(err, "🟥 canal: %v")
 	return ch, conn
@@ -51,29 +53,21 @@ func toJson(request Request) []byte {
 	return msgBytes
 }
 
-func clientGO(wg *sync.WaitGroup, start <-chan struct{}, id int) {
-	defer wg.Done()
-	<-start
-
-	ch, conn := connect("amqp://guest:guest@localhost:5672/")
+func clientGO(conn *amqp.Connection, ch *amqp.Channel, msgs <-chan amqp.Delivery, replyTo string, wg *sync.WaitGroup, start <-chan struct{}) {
 	defer conn.Close()
-	defer ch.Close()
+	defer wg.Done()
 
-	msgBytes := toJson(Request{Content: message})
+	msgBytes := util.RequestToJson(util.Request{Content: message})
 
-	err := ch.Publish(
-		"",
-		"exercicio06",
-		false,
-		false,
-		amqp.Publishing{
-			ContentType: "text/plain",
-			Body:        msgBytes,
-		},
-	)
+	for i := 0; i < count; i++ {
+		util.Publish(ch, replyTo, msgBytes)
+		msg := <-msgs
 
-	handleError(err, "🟥 Publicar: %v")
-	log.Printf("🟩 mensagem enviada %s%s%s.", Yellow, msgBytes, Reset)
+		response := util.JsonToResponse(msg.Body)
+
+		log.Printf("🟩 linhas %s%d%s.", yellow, response.Lines, reset)
+	}
+
 }
 
 func main() {
@@ -84,7 +78,14 @@ func main() {
 
 	for i := 0; i < clients; i++ {
 		wg.Add(1)
-		go clientGO(&wg, start, i+1)
+		queueName := fmt.Sprintf("fila_%d", i+1)
+
+		conn := util.NewConnection(util.Url)
+		ch := util.NewChannel(conn)
+		util.CreateQueue(queueName)
+		msgs := util.NewConsumer(ch, queueName)
+
+		go clientGO(conn, ch, msgs, queueName, &wg, start)
 	}
 
 	time.Sleep(1 * time.Second)

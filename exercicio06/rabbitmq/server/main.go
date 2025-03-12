@@ -2,18 +2,19 @@ package main
 
 import (
 	"log"
-	"net/rpc"
 	"os"
 	"strings"
+
+	util "server/util"
 
 	"github.com/streadway/amqp"
 )
 
 const (
-	Reset   = "\033[0m"
+	reset   = "\033[0m"
 	Red     = "\033[31m"
-	Green   = "\033[32m"
-	Yellow  = "\033[33m"
+	green   = "\033[32m"
+	yellow  = "\033[33m"
 	Blue    = "\033[34m"
 	Magenta = "\033[35m"
 	Cyan    = "\033[36m"
@@ -21,57 +22,107 @@ const (
 	White   = "\033[97m"
 )
 
-type Request struct {
-	Content string
-}
-
-type Arquivo struct {
-	logging bool
-}
-
 func countLines(str string) int {
 	return 1 + int(strings.Count(str, "\n"))
 }
 
-func connect(url string) (*amqp.Channel, *amqp.Connection, <-chan amqp.Delivery) {
+func newConnection(url string) *amqp.Connection {
 	conn, err := amqp.Dial(url)
 	handleError(err, "🟥 conexão: %v")
-	log.Printf("%s✅ conectado!%s", Blue, Reset)
+	log.Printf("%s✅ conectado!%s", Blue, reset)
+	return conn
+}
+
+func newChannel(conn *amqp.Connection) *amqp.Channel {
 	ch, err := conn.Channel()
 	handleError(err, "🟥 canal: %v")
+	return ch
+}
+
+func newConsumer(ch *amqp.Channel) <-chan amqp.Delivery {
 	msgs, err := ch.Consume(
 		"exercicio06",
 		"", true, false,
 		false, false, nil,
 	)
-	handleError(err, "🟥 conumidor: %v")
-	return ch, conn, msgs
+	handleError(err, "🟥 consumidor: %v")
+	return msgs
 }
 
-func handleConnection(url string) {
-	ch, conn, msgs := connect(url)
-	defer ch.Close()
+func publish(ch *amqp.Channel, msg []byte) {
+	err := ch.Publish(
+		"",
+		"exercicio06",
+		false,
+		false,
+		amqp.Publishing{
+			ContentType: "text/plain",
+			Body:        msg,
+		},
+	)
+	handleError(err, "🟥 Publicar: %v")
+}
+
+func handleConnection() {
+	conn := util.NewConnection(util.Url)
 	defer conn.Close()
+	ch := util.NewChannel(conn)
+	defer ch.Close()
+	msgs := util.NewConsumer(ch, util.Queue)
 
 	for {
-		msgBytes := <-msgs
-		log.Printf(" mensagem recebida %s%s%s.", Yellow, string(msgBytes.Body), Reset)
+		msg := <-msgs
+		request := util.JsonToRequest(msg.Body)
+		log.Printf("> mensagem %srecebida %s%s.", yellow, reset, strings.Replace(string(msg.Body), "\n", "\\n", -1))
+		response := util.ResponseToJson(
+			util.Response{
+				Lines: countLines(request.Content),
+			})
+
+		util.Publish(ch, msg.ReplyTo, response)
+		log.Printf("< mensagem  %senviada %s%s.", green, reset, response)
 
 	}
 }
 
 func main() {
-	logging := false
-	if len(os.Args) > 1 && os.Args[1] == "--log" {
-		logging = true
+	if len(os.Args) > 1 && os.Args[1] == "create" {
+		createQueue(
+			"exercicio06", // name
+			false,         // durable
+			false,         // autoDelete
+			false,         // exclusive
+			false,         // noWait
+			nil,           // args
+		)
 	}
-	arquivo := &Arquivo{logging: logging}
-	rpc.Register(arquivo)
-	handleConnection("amqp://guest:guest@localhost:5672/")
+	handleConnection()
 }
 
 func handleError(err error, msg string) {
 	if err != nil {
 		log.Fatalf(msg, err)
 	}
+}
+
+func createQueue(name string, durable, autoDelete, exclusive, noWait bool, args amqp.Table) {
+	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
+	if err != nil {
+		log.Fatalf("| fila <%s> ⭕ %v", name, err)
+	}
+	defer conn.Close()
+	ch, err := conn.Channel()
+	if err != nil {
+		log.Fatalf("| fila <%s> ⭕ %v", name, err)
+	}
+	defer ch.Close()
+
+	_, err = ch.QueueDeclare(
+		name, durable, autoDelete, exclusive, noWait, args,
+	)
+
+	if err != nil {
+		log.Fatalf("| fila <%s> ⭕ %v", name, err)
+	}
+	log.Printf("✅ %scriada fila <%s>%s", Blue, name, reset)
 }
