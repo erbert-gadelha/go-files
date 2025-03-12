@@ -2,10 +2,13 @@ package main
 
 import (
 	"client/util"
+	"fmt"
 	"io"
 	"log"
 	"os"
 	"strconv"
+	"sync"
+	"time"
 )
 
 //"github.com/streadway/amqp"
@@ -26,66 +29,55 @@ const (
 )
 
 const (
-	count = 10 //10_000
+	count = 100 //10_000
 )
 
-/*func connect(url string) (*amqp.Channel, *amqp.Connection) {
-	conn, err := amqp.Dial(url)
-	handleError(err, "🟥 conexão: %v")
-	log.Printf("%s✅ conectado!%s", Blue, reset)
-	ch, err := conn.Channel()
-	handleError(err, "🟥 canal: %v")
-	return ch, conn
-}
-
-func toJson(request Request) []byte {
-	msgBytes, err := json.Marshal(request)
-	handleError(err, "🟥 marshal: %v")
-	return msgBytes
-}
-
-func clientGO(conn *amqp.Connection, ch *amqp.Channel, msgs <-chan amqp.Delivery, replyTo string, wg *sync.WaitGroup, start <-chan struct{}) {
-	defer conn.Close()
+func clientGO(conn util.Connection, topic_name string, wg *sync.WaitGroup, start <-chan struct{}) {
+	defer conn.Disconnect()
 	defer wg.Done()
+	//msgBytes := util.RequestToJson(util.Request{Content: message })
 
-	msgBytes := util.RequestToJson(util.Request{Content: message})
+	<-start
 
 	for i := 0; i < count; i++ {
-		util.Publish(ch, replyTo, msgBytes)
-		msg := <-msgs
 
-		response := util.JsonToResponse(msg.Body)
-
-		log.Printf("🟩 linhas %s%d%s.", yellow, response.Lines, reset)
+		msg := fmt.Sprintf("message %d", i+1)
+		msgBytes := util.RequestToJson(util.Request{Content: msg, ResponseTo: topic_name})
+		conn.Publish(topic_name, msgBytes)
+		response := <-conn.Message
+		log.Println("recebido: " + string(response))
 	}
 
 }
-*/
 
 func main() {
-	util.Funcao()
-	/*handleArgs()
+	handleArgs()
 
 	var wg sync.WaitGroup
 	start := make(chan struct{})
 
-	for i := 0; i < clients; i++ {
-		print(util.Url)
-
+	for i := 0; i < 1; i++ {
 		wg.Add(1)
-		queueName := fmt.Sprintf("fila_%d", i+1)
-		conn := util.NewConnection(util.Url)
-		ch := util.NewChannel(conn)
-		util.CreateQueue(queueName)
-		msgs := util.NewConsumer(ch, queueName)
-		go clientGO(conn, ch, msgs, queueName, &wg, start)
+		conn := util.NewConnection(util.Url, "client_0")
+		/*conn.MessageHandler = func(msg []byte) {
+			fmt.Printf("< recebido <%s>.\n", string(msg))
+		}*/
+
+		topic_name := fmt.Sprintf("fila_%d", i+1)
+		conn.Subscribe(topic_name)
+
+		go clientGO(*conn, topic_name, &wg, start)
+
+		/*msg := ("Hello World <" + strconv.Itoa(i) + ">.")
+		fmt.Printf("> enviado <%s>.\n", msg)
+		conn.Publish("topico", []byte(msg))*/
 	}
 
 	time.Sleep(1 * time.Second)
 	close(start)
 
 	wg.Wait()
-	fmt.Println()*/
+	fmt.Println()
 }
 
 func handleArgs() {

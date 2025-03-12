@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
@@ -24,13 +23,15 @@ const (
 )
 
 type Request struct {
-	Content string
+	Content    string
+	ResponseTo string
 }
 type Response struct {
 	Lines int
 }
 
 type Connection struct {
+	Message        chan []byte
 	client         mqtt.Client
 	MessageHandler func([]byte)
 }
@@ -63,30 +64,23 @@ func NewConnection(url string, id string) *Connection {
 	if token := client.Connect(); token.Wait() && token.Error() != nil {
 		panic(token.Error())
 	}
-	conn := Connection{client: client, MessageHandler: nil}
+
+	conn := Connection{
+		client:         client,
+		Message:        make(chan []byte),
+		MessageHandler: nil,
+	}
+
+	conn.MessageHandler = func(b []byte) {
+		//fmt.Printf("Recebido <%s>.\n", string(b))
+		conn.Message <- b
+		//fmt.Println("Armazenado no canal.")
+	}
 
 	opts.SetDefaultPublishHandler(func(mqtt_client mqtt.Client, msg mqtt.Message) {
 		conn.MessageHandler(msg.Payload())
 	})
 	return &conn
-}
-
-func Funcao() {
-	conn := NewConnection(Url, "client_0")
-	conn.MessageHandler = func(msg []byte) {
-		fmt.Printf("< recebido <%s>.\n", string(msg))
-	}
-
-	conn.Subscribe("topico")
-
-	for i := 0; i < 10; i++ {
-		msg := fmt.Sprint("Hello <%d>.", i)
-		fmt.Printf("> enviado <%s>.\n", msg)
-		conn.Publish("topico", []byte(msg))
-		time.Sleep(1 * time.Second)
-	}
-	conn.Disconnect()
-	fmt.Println("<Fin>")
 }
 
 /*
