@@ -2,9 +2,11 @@ package util
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
+	"time"
 
-	"github.com/streadway/amqp"
+	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
 const (
@@ -17,7 +19,7 @@ const (
 	cyan    = "\033[36m"
 	gray    = "\033[37m"
 	white   = "\033[97m"
-	Url     = "amqp://guest:guest@localhost:5672/"
+	Url     = "tcp://localhost:1883"
 	Queue   = "exercicio06"
 )
 
@@ -28,6 +30,52 @@ type Response struct {
 	Lines int
 }
 
+func Funcao() {
+
+	// Configuração do broker
+	broker := "tcp://localhost:1883" // URL do servidor MQTT
+	clientID := "go_mqtt_client"     // Identificador do cliente
+	topic := "teste"                 // Tópico MQTT
+
+	// Criando opções do cliente MQTT
+	opts := mqtt.NewClientOptions()
+	opts.AddBroker(broker)
+	opts.SetClientID(clientID)
+	opts.SetDefaultPublishHandler(func(client mqtt.Client, msg mqtt.Message) {
+		fmt.Printf("Recebido: %s de %s\n", msg.Payload(), msg.Topic())
+	})
+
+	// Conectando ao servidor MQTT
+	client := mqtt.NewClient(opts)
+	if token := client.Connect(); token.Wait() && token.Error() != nil {
+		panic(token.Error())
+	}
+	fmt.Println("🚀 Conectado ao broker MQTT!")
+
+	// Assinar um tópico
+	if token := client.Subscribe(topic, 1, func(client mqtt.Client, msg mqtt.Message) {
+		fmt.Printf("📩 Mensagem recebida no tópico [%s]: %s\n", msg.Topic(), msg.Payload())
+	}); token.Wait() && token.Error() != nil {
+		panic(token.Error())
+	}
+	fmt.Println("✅ Inscrito no tópico:", topic)
+
+	// Publicar uma mensagem
+	message := "Olá, MQTT do Go!"
+	if token := client.Publish(topic, 1, false, message); token.Wait() && token.Error() != nil {
+		panic(token.Error())
+	}
+	fmt.Println("📤 Mensagem publicada:", message)
+
+	// Mantém o programa rodando para receber mensagens
+	time.Sleep(5 * time.Second)
+
+	// Desconectar
+	client.Disconnect(250)
+	fmt.Println("🔌 Desconectado do MQTT")
+}
+
+/*
 func NewConnection(url string) *amqp.Connection {
 	conn, err := amqp.Dial(url)
 	HandleError(err, "🟥 conexão: %v")
@@ -54,7 +102,7 @@ func NewConsumer(ch *amqp.Channel, queue string) <-chan amqp.Delivery {
 func Publish(ch *amqp.Channel, replyTo string, msg []byte) {
 	err := ch.Publish(
 		"",
-		replyTo,
+		"exercicio06",
 		false,
 		false,
 		amqp.Publishing{
@@ -79,24 +127,7 @@ func HandleConnection(url string, queue string) {
 	}
 }
 
-type Listener struct {
-	HandleMessage func()
-}
 
-func CreateListener(messageHandler func()) *Listener {
-	return nil
-}
-
-func (l *Listener) handleMessage(s string) {
-	print(s)
-	//handleConnection
-}
-
-func HandleError(err error, msg string) {
-	if err != nil {
-		log.Fatalf(msg, err)
-	}
-}
 
 func CreateQueue(name string) {
 	CreateQueue_(name, false, false, false, false, nil)
@@ -122,10 +153,15 @@ func CreateQueue_(name string, durable, autoDelete, exclusive, noWait bool, args
 		log.Fatalf("| fila <%s> ⭕ %v", name, err)
 	}
 	log.Printf("✅ %scriada fila <%s>%s", blue, name, reset)
-}
+}*/
 
-func ResponseToJson(request Response) []byte {
-	msgBytes, err := json.Marshal(request)
+func HandleError(err error, msg string) {
+	if err != nil {
+		log.Fatalf(msg, err)
+	}
+}
+func ResponseToJson(response Response) []byte {
+	msgBytes, err := json.Marshal(response)
 	HandleError(err, "🟥 marshal: %v")
 	return msgBytes
 }
