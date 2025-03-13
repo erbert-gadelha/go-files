@@ -7,9 +7,10 @@ import (
 	"os"
 	"strconv"
 	"sync"
+
 	//"time"
-	util "client/util"
 	connection "client/connection"
+	util "client/util"
 )
 
 //"github.com/streadway/amqp"
@@ -18,36 +19,26 @@ var clients int = 1
 var message string = "Hello World!\nHow are You?"
 
 const (
-	reset   = "\033[0m"
-	Red     = "\033[31m"
-	Green   = "\033[32m"
-	yellow  = "\033[33m"
-	Blue    = "\033[34m"
-	Magenta = "\033[35m"
-	Cyan    = "\033[36m"
-	Gray    = "\033[37m"
-	White   = "\033[97m"
+	count = 10 //10_000
 )
 
-const (
-	count = 100 //10_000
-)
-
-func clientGO(conn connection.Connection, topic_name string, wg *sync.WaitGroup, start <-chan struct{}) {
+func clientGO(conn connection.Connection, responseTo string, wg *sync.WaitGroup, start <-chan struct{}) {
 	defer conn.Disconnect()
 	defer wg.Done()
-	//msgBytes := util.RequestToJson(util.Request{Content: message })
+
+	request := util.Request{
+		Content:    "Hello, World!\nHow are you?",
+		ResponseTo: responseTo,
+	}
+	msgBytes := util.RequestToJson(request)
 
 	<-start
-
 	for i := 0; i < count; i++ {
-		msg := fmt.Sprintf("message %d", i+1)
-		msgBytes := util.RequestToJson(util.Request{Content: msg, ResponseTo: topic_name})
-		conn.Publish(topic_name, msgBytes)
+		conn.Publish(util.Queue, msgBytes)
 		response := <-conn.Message
-		log.Println("recebido: " + string(response))
+		log.Printf("%s[%s] recebido <%s>.%s", util.Yellow, responseTo, string(response), util.Reset)
 	}
-
+	log.Printf("%s[%s] acabou.%s", util.Blue, responseTo, util.Reset)
 }
 
 func main() {
@@ -56,11 +47,12 @@ func main() {
 	var wg sync.WaitGroup
 	start := make(chan struct{})
 
-	for i := 0; i < 5; i++ {
-		fmt.Println(i)
-
+	for i := 0; i < 3; i++ {
 		wg.Add(1)
-		conn := connection.NewConnection(util.Url, "client_0")
+		conn := connection.NewConnection(
+			util.Url,
+			fmt.Sprintf("client_%d", i+1),
+		)
 
 		topic_name := fmt.Sprintf("fila_%d", i+1)
 		conn.Subscribe(topic_name)

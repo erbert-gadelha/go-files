@@ -1,18 +1,18 @@
 package connection
 
 import (
-	"log"
 	util "client/util"
+	"log"
+
 	amqp "github.com/streadway/amqp"
 )
 
 type Connection struct {
-	conn         	*amqp.Connection
-	ch 				*amqp.Channel
-	//msgs 			<-chan amqp.Delivery
-	replyTo			string
-	Message        	chan []byte
-	MessageHandler 	func([]byte)
+	conn           *amqp.Connection
+	ch             *amqp.Channel
+	replyTo        string
+	Message        chan []byte
+	MessageHandler func([]byte)
 }
 
 func (c *Connection) Publish(queue string, msg []byte) {
@@ -30,13 +30,14 @@ func (c *Connection) Publish(queue string, msg []byte) {
 	util.HandleError(err, "🟥 Publicar: %v")
 }
 
-
 func (c *Connection) Subscribe(queue string) {
 	msgs := newConsumer(c.ch, queue)
-	for {
-		msg := <- msgs
-		c.Message <- msg.Body
-	}
+	go (func() {
+		for {
+			msg := <-msgs
+			c.Message <- msg.Body
+		}
+	})()
 }
 
 func (c *Connection) Disconnect() {
@@ -47,9 +48,9 @@ func (c *Connection) Disconnect() {
 func NewConnection(url string, id string) *Connection {
 	conn := newConn(url)
 	c := Connection{
-		conn:         	conn,
-		ch: 			newChannel(conn),
-		replyTo:		id,
+		conn:           conn,
+		ch:             newChannel(conn),
+		replyTo:        id,
 		Message:        make(chan []byte),
 		MessageHandler: nil,
 	}
@@ -79,13 +80,11 @@ func newConsumer(ch *amqp.Channel, queue string) <-chan amqp.Delivery {
 	return msgs
 }
 
-
-func (c*Connection) CreateQueue(name string) {
-	//CreateQueue_(name, false, false, false, false, nil)
+func (c *Connection) CreateQueue(name string) {
 	CreateQueue(name, false, false, false, false, nil, c)
 }
 
-func CreateQueue (name string, durable, autoDelete, exclusive, noWait bool, args amqp.Table, connection *Connection) {
+func CreateQueue(name string, durable, autoDelete, exclusive, noWait bool, args amqp.Table, connection *Connection) {
 	_, err := connection.ch.QueueDeclare(
 		name, durable, autoDelete, exclusive, noWait, args,
 	)

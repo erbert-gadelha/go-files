@@ -1,16 +1,14 @@
 package connection
 
 import (
-	"encoding/json"
 	"fmt"
 
-	util "client/util"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
 type Connection struct {
-	Message        chan []byte
 	client         mqtt.Client
+	Message        chan []byte
 	MessageHandler func([]byte)
 }
 

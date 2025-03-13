@@ -15,10 +15,9 @@ const (
 	Cyan    = "\033[36m"
 	Gray    = "\033[37m"
 	White   = "\033[97m"
-	Url     = "amqp://guest:guest@localhost:5672/"
+	Url     = "tcp://localhost:1883"
 	Queue   = "exercicio06"
 )
-
 
 type Request struct {
 	Content    string

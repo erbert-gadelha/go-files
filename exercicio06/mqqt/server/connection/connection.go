@@ -1,10 +1,8 @@
 package connection
 
 import (
-	//"encoding/json"
 	"fmt"
 
-	//util "server/util"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
@@ -59,7 +57,6 @@ func NewConnection(url string, id string) *Connection {
 	return &conn
 }
 
-
-func (c*Connection) CreateQueue(queue string) {
+func (c *Connection) CreateQueue(queue string) {
 
 }
