@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 	"sync"
+	"time"
 
 	//"time"
 	connection "client/connection"
@@ -19,7 +20,7 @@ var clients int = 1
 var message string = "Hello World!\nHow are You?"
 
 const (
-	count = 10 //10_000
+	count = 10_000 //10_000
 )
 
 func clientGO(conn connection.Connection, responseTo string, wg *sync.WaitGroup, start <-chan struct{}) {
@@ -27,18 +28,23 @@ func clientGO(conn connection.Connection, responseTo string, wg *sync.WaitGroup,
 	defer wg.Done()
 
 	request := util.Request{
-		Content:    "Hello, World!\nHow are you?",
+		Content:    message,
 		ResponseTo: responseTo,
 	}
 	msgBytes := util.RequestToJson(request)
 
 	<-start
 	for i := 0; i < count; i++ {
+		start := time.Now()
+		///////////
 		conn.Publish(util.Queue, msgBytes)
-		response := <-conn.Message
-		log.Printf("%s[%s] recebido <%s>.%s", util.Yellow, responseTo, string(response), util.Reset)
+		<-conn.Message
+		///////////
+		delta := time.Since(start) / time.Nanosecond
+		fmt.Println(strconv.FormatInt(delta.Nanoseconds(), 10))
+		//log.Printf("%s[%s] recebido <%s>.%s", util.Yellow, responseTo, string(response), util.Reset)
 	}
-	log.Printf("%s[%s] acabou.%s", util.Blue, responseTo, util.Reset)
+	//log.Printf("%s[%s] acabou.%s", util.Blue, responseTo, util.Reset)
 }
 
 func main() {
@@ -47,7 +53,7 @@ func main() {
 	var wg sync.WaitGroup
 	start := make(chan struct{})
 
-	for i := 0; i < 3; i++ {
+	for i := 0; i < clients; i++ {
 		wg.Add(1)
 		conn := connection.NewConnection(
 			util.Url,

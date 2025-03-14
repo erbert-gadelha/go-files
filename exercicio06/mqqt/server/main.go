@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"os"
 	connection "server/connection"
 	util "server/util"
@@ -14,15 +13,15 @@ func countLines(str string) int {
 
 func handleConnection(conn *connection.Connection, msg []byte) {
 	request := util.JsonToRequest(msg)
-	content := strings.Replace(string(request.Content), "\n", "\\n", -1)
-	log.Printf("%s[%s] > %s%s.", util.Yellow, request.ResponseTo, content, util.Reset)
+	//content := strings.Replace(string(request.Content), "\n", "\\n", -1)
+	//log.Printf("%s[%s] > %s%s.", util.Yellow, request.ResponseTo, content, util.Reset)
 	response := util.ResponseToJson(
 		util.Response{
 			Lines: countLines(request.Content),
 		})
 
 	conn.Publish(request.ResponseTo, response)
-	log.Printf("%s[%s] < %s%s", util.Green, request.ResponseTo, string(response), util.Reset)
+	//log.Printf("%s[%s] < %s%s", util.Green, request.ResponseTo, string(response), util.Reset)
 }
 
 func main() {

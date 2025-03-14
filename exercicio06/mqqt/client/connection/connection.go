@@ -1,8 +1,6 @@
 package connection
 
 import (
-	"fmt"
-
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
@@ -13,7 +11,8 @@ type Connection struct {
 }
 
 func (c *Connection) Publish(queue string, msg []byte) {
-	token := c.client.Publish(queue, 1, false, msg)
+	//token := c.client.Publish(queue, 1, false, msg)
+	token := c.client.Publish(queue, 0, false, msg)
 	if token.Wait() && token.Error() != nil {
 		panic(token.Error())
 	}
@@ -24,7 +23,7 @@ func (c *Connection) Subscribe(queue string) {
 	}); token.Wait() && token.Error() != nil {
 		panic(token.Error())
 	}
-	fmt.Printf("inscrito no tópico <%s>\n", queue)
+	//fmt.Printf("inscrito no tópico <%s>\n", queue)
 }
 
 func (c *Connection) Disconnect() {
