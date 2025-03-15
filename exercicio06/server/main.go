@@ -2,7 +2,9 @@ package main
 
 import (
 	"os"
-	connection "server/connection"
+	connection "server/connection_mqqt"
+
+	//connection "server/connection_rabbitmq"
 	util "server/util"
 	"strings"
 )
@@ -26,7 +28,7 @@ func handleConnection(conn *connection.Connection, msg []byte) {
 
 func main() {
 
-	conn := connection.NewConnection(util.Url, "servidor")
+	conn := connection.NewConnection(util.URI_rabbitMQ, "servidor")
 	defer conn.Disconnect()
 
 	if len(os.Args) > 1 && os.Args[1] == "create" {

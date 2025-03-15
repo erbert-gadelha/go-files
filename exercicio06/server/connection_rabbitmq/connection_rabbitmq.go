@@ -1,7 +1,6 @@
-package connection
+package connection_rabbitmq
 
 import (
-	"fmt"
 	"log"
 	util "server/util"
 
@@ -9,9 +8,8 @@ import (
 )
 
 type Connection struct {
-	conn *amqp.Connection
-	ch   *amqp.Channel
-	//msgs 			<-chan amqp.Delivery
+	conn           *amqp.Connection
+	ch             *amqp.Channel
 	replyTo        string
 	Message        chan []byte
 	MessageHandler func([]byte)
@@ -29,12 +27,11 @@ func (c *Connection) Publish(queue string, msg []byte) {
 			ReplyTo:     c.replyTo,
 		},
 	)
-	util.HandleError(err, "🟥 Publicar: %v")
+	util.HandleError(err, "🟥 [RABBIT] Publicar: %v")
 }
 
 func (c *Connection) Subscribe(queue string) {
 	msgs := newConsumer(c.ch, queue)
-	fmt.Printf("inscrito em <%s>.", queue)
 	go (func() {
 		for {
 			msg := <-msgs
@@ -62,14 +59,14 @@ func NewConnection(url string, id string) *Connection {
 
 func newConn(url string) *amqp.Connection {
 	conn, err := amqp.Dial(url)
-	util.HandleError(err, "🟥 conexão: %v")
-	log.Printf("%s✅ conectado!%s", util.Blue, util.Reset)
+	util.HandleError(err, "🟥 [RABBIT] conexão: %v")
+	log.Printf("%s✅ [RABBIT] conectado!%s", util.Blue, util.Reset)
 	return conn
 }
 
 func newChannel(conn *amqp.Connection) *amqp.Channel {
 	ch, err := conn.Channel()
-	util.HandleError(err, "🟥 canal: %v")
+	util.HandleError(err, "🟥 [RABBIT] canal: %v")
 	return ch
 }
 
@@ -79,12 +76,11 @@ func newConsumer(ch *amqp.Channel, queue string) <-chan amqp.Delivery {
 		"", true, false,
 		false, false, nil,
 	)
-	util.HandleError(err, "🟥 consumidor: %v")
+	util.HandleError(err, "🟥 [RABBIT] consumidor: %v")
 	return msgs
 }
 
 func (c *Connection) CreateQueue(name string) {
-	//CreateQueue_(name, false, false, false, false, nil)
 	CreateQueue(name, false, false, false, false, nil, c)
 }
 
@@ -92,6 +88,6 @@ func CreateQueue(name string, durable, autoDelete, exclusive, noWait bool, args 
 	_, err := connection.ch.QueueDeclare(
 		name, durable, autoDelete, exclusive, noWait, args,
 	)
-	util.HandleError(err, "⭕ criar fila> %v")
-	log.Printf("✅ %scriada fila <%s>%s", util.Blue, name, util.Reset)
+	util.HandleError(err, "⭕ [RABBIT] criar fila> %v")
+	log.Printf("✅%s [RABBIT] criada fila <%s>%s", util.Blue, name, util.Reset)
 }

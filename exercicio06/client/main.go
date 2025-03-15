@@ -9,12 +9,11 @@ import (
 	"sync"
 	"time"
 
-	//"time"
-	connection "client/connection"
 	util "client/util"
-)
 
-//"github.com/streadway/amqp"
+	//connection "client/connection_rabbitmq"
+	connection "client/connection_mqqt"
+)
 
 var clients int = 1
 var message string = "Hello World!\nHow are You?"
@@ -38,13 +37,13 @@ func clientGO(conn connection.Connection, responseTo string, wg *sync.WaitGroup,
 		start := time.Now()
 		///////////
 		conn.Publish(util.Queue, msgBytes)
-		<-conn.Message
+		response := <-conn.Message
 		///////////
 		delta := time.Since(start) / time.Nanosecond
 		fmt.Println(strconv.FormatInt(delta.Nanoseconds(), 10))
-		//log.Printf("%s[%s] recebido <%s>.%s", util.Yellow, responseTo, string(response), util.Reset)
+		log.Printf("%s[%s] recebido <%s>.%s", util.Yellow, responseTo, string(response), util.Reset)
 	}
-	//log.Printf("%s[%s] acabou.%s", util.Blue, responseTo, util.Reset)
+	log.Printf("%s[%s] acabou.%s", util.Blue, responseTo, util.Reset)
 }
 
 func main() {
@@ -56,17 +55,18 @@ func main() {
 	for i := 0; i < clients; i++ {
 		wg.Add(1)
 		conn := connection.NewConnection(
-			util.Url,
+			util.URI_rabbitMQ,
 			fmt.Sprintf("client_%d", i+1),
 		)
 
 		topic_name := fmt.Sprintf("fila_%d", i+1)
+		conn.CreateQueue(topic_name)
 		conn.Subscribe(topic_name)
 
 		go clientGO(*conn, topic_name, &wg, start)
 	}
 
-	//time.Sleep(1 * time.Second)
+	time.Sleep(500 * time.Millisecond)
 	close(start)
 
 	wg.Wait()
@@ -88,10 +88,4 @@ func readFile(fileName string) string {
 	content, _ := io.ReadAll(file)
 	file.Close()
 	return string(content)
-}
-
-func handleError(err error, msg string) {
-	if err != nil {
-		log.Fatalf(msg, err)
-	}
 }

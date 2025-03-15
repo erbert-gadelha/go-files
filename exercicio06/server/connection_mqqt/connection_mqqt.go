@@ -1,18 +1,19 @@
-package connection
+package connection_mqqt
 
 import (
-	"fmt"
+	"server/util"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
 type Connection struct {
-	Message        chan []byte
 	client         mqtt.Client
+	Message        chan []byte
 	MessageHandler func([]byte)
 }
 
 func (c *Connection) Publish(queue string, msg []byte) {
+	//token := c.client.Publish(queue, 1, false, msg)
 	token := c.client.Publish(queue, 0, false, msg)
 	if token.Wait() && token.Error() != nil {
 		panic(token.Error())
@@ -24,7 +25,7 @@ func (c *Connection) Subscribe(queue string) {
 	}); token.Wait() && token.Error() != nil {
 		panic(token.Error())
 	}
-	fmt.Printf("inscrito no tópico <%s>\n", queue)
+	//fmt.Printf("inscrito no tópico <%s>\n", queue)
 }
 
 func (c *Connection) Disconnect() {
@@ -33,7 +34,7 @@ func (c *Connection) Disconnect() {
 
 func NewConnection(url string, id string) *Connection {
 	opts := mqtt.NewClientOptions()
-	opts.AddBroker(url)
+	opts.AddBroker(util.URI_mqqt)
 	opts.SetClientID(id)
 
 	client := mqtt.NewClient(opts)
@@ -57,6 +58,6 @@ func NewConnection(url string, id string) *Connection {
 	return &conn
 }
 
-func (c *Connection) CreateQueue(queue string) {
+func (c *Connection) CreateQueue(name string) {
 
 }
