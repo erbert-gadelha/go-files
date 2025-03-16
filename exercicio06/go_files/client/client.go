@@ -3,16 +3,15 @@ package main
 import (
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"strconv"
 	"sync"
 	"time"
 
-	util "client/util"
+	util "main/util"
 
-	//connection "client/connection_rabbitmq"
-	connection "client/connection_mqqt"
+	connection "main/connection_rabbitmq"
+	//connection "main/connection_mqqt"
 )
 
 var clients int = 1
@@ -25,50 +24,38 @@ const (
 func clientGO(conn connection.Connection, responseTo string, wg *sync.WaitGroup, start <-chan struct{}) {
 	defer conn.Disconnect()
 	defer wg.Done()
-
-	request := util.Request{
-		Content:    message,
-		ResponseTo: responseTo,
-	}
-	msgBytes := util.RequestToJson(request)
-
+	msgBytes := util.RequestToJson(
+		util.Request{
+			Content:    message,
+			ResponseTo: responseTo,
+		},
+	)
 	<-start
 	for i := 0; i < count; i++ {
 		start := time.Now()
 		///////////
 		conn.Publish(util.Queue, msgBytes)
-		response := <-conn.Message
+		<-conn.Message
 		///////////
 		delta := time.Since(start) / time.Nanosecond
 		fmt.Println(strconv.FormatInt(delta.Nanoseconds(), 10))
-		log.Printf("%s[%s] recebido <%s>.%s", util.Yellow, responseTo, string(response), util.Reset)
 	}
-	log.Printf("%s[%s] acabou.%s", util.Blue, responseTo, util.Reset)
 }
 
 func main() {
 	handleArgs()
-
 	var wg sync.WaitGroup
 	start := make(chan struct{})
-
 	for i := 0; i < clients; i++ {
 		wg.Add(1)
-		conn := connection.NewConnection(
-			util.URI_rabbitMQ,
-			fmt.Sprintf("client_%d", i+1),
-		)
-
+		id := fmt.Sprintf("client_%d", i+1)
+		conn := connection.NewConnection(id)
 		topic_name := fmt.Sprintf("fila_%d", i+1)
 		conn.CreateQueue(topic_name)
 		conn.Subscribe(topic_name)
-
 		go clientGO(*conn, topic_name, &wg, start)
 	}
-
-	time.Sleep(500 * time.Millisecond)
 	close(start)
-
 	wg.Wait()
 	fmt.Println()
 }

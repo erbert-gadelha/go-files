@@ -1,7 +1,7 @@
 package connection_mqqt
 
 import (
-	"server/util"
+	util "main/util"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
@@ -32,7 +32,7 @@ func (c *Connection) Disconnect() {
 	c.client.Disconnect(255)
 }
 
-func NewConnection(url string, id string) *Connection {
+func NewConnection(id string) *Connection {
 	opts := mqtt.NewClientOptions()
 	opts.AddBroker(util.URI_mqqt)
 	opts.SetClientID(id)

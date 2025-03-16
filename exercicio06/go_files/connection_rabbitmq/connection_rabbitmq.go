@@ -2,7 +2,7 @@ package connection_rabbitmq
 
 import (
 	"log"
-	util "server/util"
+	util "main/util"
 
 	amqp "github.com/streadway/amqp"
 )
@@ -45,8 +45,8 @@ func (c *Connection) Disconnect() {
 	c.conn.Close()
 }
 
-func NewConnection(url string, id string) *Connection {
-	conn := newConn(url)
+func NewConnection(id string) *Connection {
+	conn := newConn(util.URI_rabbitMQ)
 	c := Connection{
 		conn:           conn,
 		ch:             newChannel(conn),
